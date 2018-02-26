@@ -18,6 +18,11 @@ import android.webkit.WebSettings;
 import android.telephony.TelephonyManager;
 import android.text.format.Formatter;
 import android.app.ActivityManager;
+  
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiConfiguration;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -30,6 +35,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 import java.lang.Runtime;
+
+
+import java.util.concurrent.TimeUnit;
+import java.net.NetworkInterface;
+import java.util.Collections;
+import java.util.List;
+
 
 import javax.annotation.Nullable;
 
@@ -148,6 +160,56 @@ public class RNDeviceModule extends ReactContextBaseJavaModule {
     return null;
   }
 
+  @ReactMethod
+  public void getMacAddressFinal(final Callback callback) {
+    try {
+      Context cntxt = (Context) getReactApplicationContext().getApplicationContext();
+      WifiManager wifi = (WifiManager) cntxt.getSystemService(Context.WIFI_SERVICE);
+      if (wifi == null)
+        throw new Exception("Failed: WiFiManager is null");
+
+      WifiInfo info = wifi.getConnectionInfo();
+      if (info == null)
+        throw new Exception("Failed: WifiInfo is null");
+
+      if (info.getMacAddress().equalsIgnoreCase("02:00:00:00:00:00")) {
+
+        List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+        for (NetworkInterface nif : all) {
+          if (!nif.getName().equalsIgnoreCase("wlan0"))
+            continue;
+
+          byte[] macBytes = nif.getHardwareAddress();
+          if (macBytes == null) {
+            throw new Exception("Não achou getHardwareAddress()");
+          }
+
+          StringBuilder res1 = new StringBuilder();
+
+          for (byte b : macBytes) {
+            res1.append(Integer.toHexString(b & 0xFF) + ":");
+          }
+
+          if (res1.length() > 0) {
+            res1.deleteCharAt(res1.length() - 1);
+          }
+
+          callback.invoke(res1.toString());
+
+        }
+
+      } else {
+        callback.invoke(info.getMacAddress());
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      callback.invoke("error");
+    }
+
+  }
+
+
   @Override
   public @Nullable
   Map<String, Object> getConstants() {
@@ -232,7 +294,7 @@ public class RNDeviceModule extends ReactContextBaseJavaModule {
     constants.put("carrier", this.getCarrier());
     constants.put("totalDiskCapacity", this.getTotalDiskCapacity());
     constants.put("freeDiskStorage", this.getFreeDiskStorage());
-
+    // constants.put("MacAddressFinal", this.getMacAddressFinal());
     Runtime rt = Runtime.getRuntime();
     constants.put("maxMemory", rt.maxMemory());
     ActivityManager actMgr = (ActivityManager) this.reactContext.getSystemService(Context.ACTIVITY_SERVICE);
