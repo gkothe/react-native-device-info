@@ -109,5 +109,9 @@ module.exports = {
   },
   getFreeDiskStorage: function () {
     return RNDeviceInfo.freeDiskStorage;
+  },
+  getMacAddressFinal: function (callback) {
+     RNDeviceInfo.getMacAddressFinal(callback);
   }
+
 };
